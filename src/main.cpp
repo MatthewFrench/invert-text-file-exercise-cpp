@@ -12,6 +12,10 @@
 
 using namespace std;
 
+/*
+ * Stream in the file, when a new line is detected then
+ * append the line to the line processing queue.
+ */
 void retrievalThreadFunction(
         const string &inputFilePath,
         queue<vector<string> *> *linesAvailableToProcess,
@@ -57,6 +61,10 @@ void retrievalThreadFunction(
     readFromFile.close();
 }
 
+/*
+ * Monitor the line processing queue, when a line is available
+ * to process then reverse the line and append to the writing queue.
+ */
 void processThreadFunction(
         queue<vector<string> *> *linesAvailableToProcess,
         mutex *linesAvailableToProcessLock,
@@ -98,6 +106,10 @@ void processThreadFunction(
     processingFinished->store(true);
 }
 
+/*
+ * Monitor the line writing queue, when a line is available then
+ * write the line to the output file.
+ */
 void writeThreadFunction(
         const string &outputFilePath,
         queue<string *> *linesToWriteOut,

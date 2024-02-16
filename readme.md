@@ -16,3 +16,4 @@ Potential future improvements:
 * Add an option to limit line memory usage by incorporating a new line find read forward then a read back to reverse and write the line out
 * Add unit tests to ensure correct-ness
 * Create a large input for benchmarking, add a naive solution to compare in benchmark
+* Write in Rust to maintain speed while obtaining guaranteed memory safety (in this C++ solution, an accidental missing delete could result in a memory leak)
