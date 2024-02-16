@@ -29,25 +29,25 @@ int main(int argumentCount, char *argumentList[]) {
     ofstream writeToFile;
     readFromFile.open(inputFilePath, ios::in);
     writeToFile.open(outputFilePath);
-    istreambuf_iterator<char> start(readFromFile);
-    istreambuf_iterator<char> end;
-    std::vector<string> line;
-    while (start != end) {
-        string s;
-        utf8::utfchar32_t characterPoint = utf8::next(start, end);
-        utf8::append(characterPoint, s);
-        if (s[0] == '\n') {
-            for (int i = line.size() - 1; i >= 0; i--) {
-                writeToFile << line[i];
+    istreambuf_iterator<char> readStartIterator(readFromFile);
+    istreambuf_iterator<char> readEndIterator;
+    std::vector<string> currentLine;
+    while (readStartIterator != readEndIterator) {
+        string characterPointAsString;
+        utf8::utfchar32_t characterPoint = utf8::next(readStartIterator, readEndIterator);
+        utf8::append(characterPoint, characterPointAsString);
+        if (characterPointAsString[0] == '\n') {
+            for (int index = currentLine.size() - 1; index >= 0; index--) {
+                writeToFile << currentLine[index];
             }
-            line.clear();
+            currentLine.clear();
             writeToFile << '\n';
         } else {
-            line.push_back(s);
+            currentLine.push_back(characterPointAsString);
         }
     }
-    for (int i = line.size() - 1; i >= 0; i--) {
-        writeToFile << line[i];
+    for (int index = currentLine.size() - 1; index >= 0; index--) {
+        writeToFile << currentLine[index];
     }
     readFromFile.close();
     writeToFile.close();
