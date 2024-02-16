@@ -25,11 +25,14 @@ void retrievalThreadFunction(
     istreambuf_iterator<char> readEndIterator;
     // Note, if a single line takes up too much memory, we can change the solution
     // to limit the amount of memory being used. It will involve a tradeoff of memory vs speed.
-    // One example would be to do a read scan for the next new-line, then load
-    // the binary data backwards from that newline to avoid storing the whole line in memory.
+    // One example would be to do a read scan for the next new-line, then read the file
+    // binary data backwards from that newline to avoid storing the whole line in memory.
     // The trade-off there would be double the amount of reading to decrease amount of data stored in memory.
-    auto *currentLine = new vector<string>;
+    vector<string> *currentLine = nullptr;
     while (readStartIterator != readEndIterator) {
+        if (currentLine == nullptr) {
+            currentLine = new vector<string>;
+        }
         string characterPointAsString;
         // Handle unicode characters, just reversing bytes will make unicode text invalid
         utf8::utfchar32_t characterPoint = utf8::next(readStartIterator, readEndIterator);
@@ -37,18 +40,19 @@ void retrievalThreadFunction(
         if (characterPointAsString[0] == '\n') {
             linesAvailableToProcessLock->lock();
             linesAvailableToProcess->push(currentLine);
+            // Explicitly track the new lines, so we don't add an unnecessary newline to the output file
+            linesAvailableToProcess->push(new vector<string>{"\n"});
             linesAvailableToProcessLock->unlock();
-            currentLine = new std::vector<string>;
+            currentLine = nullptr;
         } else {
             currentLine->push_back(characterPointAsString);
         }
     }
-    if (!currentLine->empty()) {
+    if (currentLine != nullptr) {
         linesAvailableToProcessLock->lock();
         linesAvailableToProcess->push(currentLine);
         linesAvailableToProcessLock->unlock();
     }
-    // Todo: Make sure I'm not adding an extra newline at the end
     readingFinished->store(true);
     readFromFile.close();
 }
@@ -88,6 +92,8 @@ void processThreadFunction(
         linesToWriteOutLock->lock();
         linesToWriteOut->push(reversedString);
         linesToWriteOutLock->unlock();
+        // This was created in the retrieval thread, delete here to avoid a memory leak
+        delete currentLine;
     }
     processingFinished->store(true);
 }
@@ -121,7 +127,9 @@ void writeThreadFunction(
             std::this_thread::yield();
             continue;
         }
-        writeToFile << *currentLine << '\n';
+        writeToFile << *currentLine;
+        // This was created in the processing thread, delete here to avoid a memory leak
+        delete currentLine;
     }
 
     writeToFile.close();
@@ -138,9 +146,6 @@ int main(int argumentCount, char *argumentList[]) {
 
     string inputFilePath = argumentList[1];
     string outputFilePath = argumentList[2];
-
-    // Todo: Use a string builder
-    // Todo: Everywhere new is used, release the data
 
     auto *linesAvailableToProcess = new queue<vector<string> *>();
     auto *linesAvailableToProcessLock = new mutex();
@@ -168,10 +173,23 @@ int main(int argumentCount, char *argumentList[]) {
                             processingFinished);
 
     retrievalThread.join();
+    std::chrono::steady_clock::time_point readingEndTime = std::chrono::steady_clock::now();
     processThread.join();
+    std::chrono::steady_clock::time_point processingEndTime = std::chrono::steady_clock::now();
     writeThread.join();
+    std::chrono::steady_clock::time_point writingEndTime = std::chrono::steady_clock::now();
 
-    std::chrono::steady_clock::time_point endTime = std::chrono::steady_clock::now();
-    double secondsSinceStart = std::chrono::duration<double>(endTime - startTime).count();
-    cout << "Executed in " << secondsSinceStart << " seconds." << endl;
+    double readingDuration = std::chrono::duration<double>(readingEndTime - startTime).count();
+    double processingDuration = std::chrono::duration<double>(processingEndTime - startTime).count();
+    double writingDuration = std::chrono::duration<double>(writingEndTime - startTime).count();
+    cout << "Reading finished in " << readingDuration << " seconds." << endl;
+    cout << "Processing finished in " << processingDuration << " seconds." << endl;
+    cout << "Writing finished in " << writingDuration << " seconds." << endl;
+
+    delete linesAvailableToProcess;
+    delete linesAvailableToProcessLock;
+    delete linesToWriteOut;
+    delete linesToWriteOutLock;
+    delete readingFinished;
+    delete processingFinished;
 }
