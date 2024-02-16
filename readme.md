@@ -1,6 +1,6 @@
 # Invert Text File Exercise in C++
 
-This project takes a text file input and target output, then saves each line of the input file reversed to the output file.
+This project takes a text file input and target output, then saves each line of the input file reversed to the output file. Unicode-friendly.
 
 Setup:
 * `git clone https://github.com/microsoft/vcpkg`
