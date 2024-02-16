@@ -1,0 +1,8 @@
+/build
+/cmake-build-debug
+CmakeUserPresets.json
+/vcpkg
+/vcpkg_installed
+example-output.txt
+.DS_Store
+.idea

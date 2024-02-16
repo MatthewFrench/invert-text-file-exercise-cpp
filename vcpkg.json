@@ -1,0 +1,8 @@
+{
+  "name": "invert-text-file-exercise",
+  "version-string": "0.0.1",
+  "license": "MIT",
+  "dependencies": [
+    "utfcpp"
+  ]
+}
